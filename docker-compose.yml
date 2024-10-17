@@ -1,0 +1,223 @@
+---
+
+services:
+
+  gateway:
+    image: alpine
+    container_name: gateway
+    command: >
+        sh -c "tail -f /dev/null"
+    networks:
+      redis-net-a:
+        ipv4_address: 172.21.0.2
+      redis-net-b:
+        ipv4_address: 172.21.1.2
+    cap_add:
+      - NET_ADMIN  # Allows network management to configure routing
+
+  redis-1:
+    image: pdns-redis:latest
+    container_name: redis-1
+    hostname: redis-1
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/redis-1:/data
+    command: >
+        sh -c "
+          ip route add 172.21.1.0/24 via 172.21.0.2 &&
+          ip r s && 
+          redis-server --appendonly yes  --repl-diskless-load on-empty-db  --protected-mode no
+        "
+    networks:
+      redis-net-a:
+        ipv4_address: 172.21.0.3
+    extra_hosts:
+      - "redis-1=172.21.0.3"
+      - "redis-2=172.21.0.4"
+      - "redis-3=172.21.1.5"
+      - "sentinel-1=172.21.0.6"
+      - "sentinel-2=172.21.0.7"
+      - "sentinel-3=172.21.1.8"
+    cap_add:
+      - NET_ADMIN  # Allows network management to configure routing
+
+#  redis-2:
+#    image: pdns-redis:latest
+#    container_name: redis-2
+#    hostname: redis-2
+#    depends_on:
+#      - redis-1
+#    ports:
+#      - "6380:6379"
+#    volumes:
+#      - ./data/redis-2:/data
+#    command: >
+#        sh -c "
+#          ip route add 172.21.1.0/24 via 172.21.0.2 &&
+#          ip r s && 
+#          redis-server --appendonly yes --replicaof 172.21.0.3 6379 --repl-diskless-load on-empty-db --protected-mode no 
+#        "
+#    networks:
+#      redis-net-a:
+#        ipv4_address: 172.21.0.4
+#    extra_hosts:
+#      - "redis-1=172.21.0.3"
+#      - "redis-2=172.21.0.4"
+#      - "redis-3=172.21.1.5"
+#      - "sentinel-1=172.21.0.6"
+#      - "sentinel-2=172.21.0.7"
+#      - "sentinel-3=172.21.1.8"
+#    cap_add:
+#      - NET_ADMIN  # Allows network management to configure routing
+
+  redis-3:
+    image: pdns-redis:latest
+    container_name: redis-3
+    hostname: redis-3
+    depends_on:
+      - redis-1
+    ports:
+      - "6381:6379"
+    volumes:
+      - ./data/redis-3:/data
+    command: >
+        sh -c "
+          ip route add 172.21.0.0/24 via 172.21.1.2 && 
+          ip r s && 
+          redis-server --appendonly yes --replicaof 172.21.0.3 6379 --repl-diskless-load on-empty-db --protected-mode no 
+        "
+    networks:
+      redis-net-b:
+        ipv4_address: 172.21.1.5
+    extra_hosts:
+      - "redis-1=172.21.0.3"
+      - "redis-2=172.21.0.4"
+      - "redis-3=172.21.1.5"
+      - "sentinel-1=172.21.0.6"
+      - "sentinel-2=172.21.0.7"
+      - "sentinel-3=172.21.1.8"
+    cap_add:
+      - NET_ADMIN  # Allows network management to configure routing
+
+  sentinel-1:
+    image: pdns-redis:latest
+    container_name: sentinel-1
+    hostname: sentinel-1
+    depends_on:
+      - redis-1
+    ports:
+      - "26379:26379"
+    command: >
+      sh -c 'ip route add 172.21.1.0/24 via 172.21.0.2 &&
+            echo "bind 0.0.0.0" > /etc/sentinel.conf &&
+            echo "sentinel announce-ip 172.21.0.6" >> /etc/sentinel.conf &&
+            echo "sentinel announce-port 26379" >> /etc/sentinel.conf &&
+            echo "sentinel monitor mymaster 172.21.0.3 6379 2" >> /etc/sentinel.conf &&
+            echo "sentinel resolve-hostnames yes" >> /etc/sentinel.conf &&
+            echo "sentinel down-after-milliseconds mymaster 10000" >> /etc/sentinel.conf &&
+            echo "sentinel failover-timeout mymaster 10000" >> /etc/sentinel.conf &&
+            echo "sentinel parallel-syncs mymaster 1" >> /etc/sentinel.conf &&
+            redis-sentinel /etc/sentinel.conf'
+    networks:
+      redis-net-a:
+        ipv4_address: 172.21.0.6
+    extra_hosts:
+      - "redis-1=172.21.0.3"
+      - "redis-2=172.21.0.4"
+      - "redis-3=172.21.1.5"
+      - "sentinel-1=172.21.0.6"
+      - "sentinel-2=172.21.0.7"
+      - "sentinel-3=172.21.1.8"
+    cap_add:
+      - NET_ADMIN  # Allows network management to configure routing
+
+
+  sentinel-2:
+    image: pdns-redis:latest
+    container_name: sentinel-2
+    hostname: sentinel-2
+    depends_on:
+      - redis-1
+    ports:
+      - "26380:26379"
+    command: >
+        sh -c 'ip route add 172.21.1.0/24 via 172.21.0.2 &&
+              echo "bind 0.0.0.0" > /etc/sentinel.conf &&
+              echo "sentinel announce-ip 172.21.0.7" >> /etc/sentinel.conf &&
+              echo "sentinel announce-port 26379" >> /etc/sentinel.conf &&
+              echo "sentinel monitor mymaster 172.21.0.3 6379 2" >> /etc/sentinel.conf &&
+              echo "sentinel resolve-hostnames yes" >> /etc/sentinel.conf &&
+              echo "sentinel down-after-milliseconds mymaster 10000" >> /etc/sentinel.conf &&
+              echo "sentinel failover-timeout mymaster 10000" >> /etc/sentinel.conf &&
+              echo "sentinel parallel-syncs mymaster 1" >> /etc/sentinel.conf &&
+              redis-sentinel /etc/sentinel.conf'
+    networks:
+      redis-net-a:
+        ipv4_address: 172.21.0.7
+    extra_hosts:
+      - "redis-1=172.21.0.3"
+      - "redis-2=172.21.0.4"
+      - "redis-3=172.21.1.5"
+      - "sentinel-1=172.21.0.6"
+      - "sentinel-2=172.21.0.7"
+      - "sentinel-3=172.21.1.8"
+    cap_add:
+      - NET_ADMIN  # Allows network management to configure routing
+
+  sentinel-3:
+    image: pdns-redis:latest
+    container_name: sentinel-3
+    hostname: sentinel-3
+    depends_on:
+      - redis-1
+    ports:
+      - "26381:26379"
+    command: >
+        sh -c 'ip route add 172.21.0.0/24 via 172.21.1.2 &&
+              echo "bind 0.0.0.0" > /etc/sentinel.conf &&
+              echo "sentinel announce-ip 172.21.1.8" >> /etc/sentinel.conf &&
+              echo "sentinel announce-port 26379" >> /etc/sentinel.conf &&
+              echo "sentinel monitor mymaster 172.21.0.3 6379 2" >> /etc/sentinel.conf &&
+              echo "sentinel resolve-hostnames yes" >> /etc/sentinel.conf &&
+              echo "sentinel down-after-milliseconds mymaster 10000" >> /etc/sentinel.conf &&
+              echo "sentinel failover-timeout mymaster 10000" >> /etc/sentinel.conf &&
+              echo "sentinel parallel-syncs mymaster 1" >> /etc/sentinel.conf &&
+              redis-sentinel /etc/sentinel.conf'
+    networks:
+      redis-net-b:
+        ipv4_address: 172.21.1.8
+    extra_hosts:
+      - "redis-1=172.21.0.3"
+      - "redis-2=172.21.0.4"
+      - "redis-3=172.21.1.5"
+      - "sentinel-1=172.21.0.6"
+      - "sentinel-2=172.21.0.7"
+      - "sentinel-3=172.21.1.8"
+    cap_add:
+      - NET_ADMIN  # Allows network management to configure routing
+
+#  redisinsight:
+#    image: redis/redisinsight:latest
+#    container_name: redisinsight
+#    ports:
+#      - "5540:5540"
+#    networks:
+#      redis-net-a:
+#        ipv4_address: 172.21.0.9
+#    cap_add:
+#      - NET_ADMIN  # Allows network management to configure routing
+
+networks:
+  redis-net-a:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/24
+          gateway: "172.21.0.1"
+  redis-net-b:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.1.0/24
+          gateway: "172.21.1.1"
