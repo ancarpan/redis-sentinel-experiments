@@ -8,11 +8,13 @@ We deploy:
     - 2 x (redis + sentinel) on first one, 
     - 1 x (redis + sentinel) on second network
 
+```
   ┌───────┐ ┌───────┐ ┌──────────┐ ┌──────────┐   ┌───────┐ ┌───────┐  ┌───────────┐    
   │redis-1│ │redis-2│ │sentinel-1│ │sentinel-2│   │gateway│ │redis-3│  │sentinel-3 │    
   └───────┘ └───────┘ └──────────┘ └──────────┘   └───────┘ └───────┘  └───────────┘    
      |         |           |            |           |   |       |        |              
      ------------------------------------------------   ------------------              
+```
 
 This way we can play with networks disappearing and see how sentinel behaves
 
