@@ -39,6 +39,7 @@ services:
       - "sentinel-1=172.21.0.6"
       - "sentinel-2=172.21.0.7"
       - "sentinel-3=172.21.1.8"
+      - "sentinel-4=172.21.1.9"
     cap_add:
       - NET_ADMIN  # Allows network management to configure routing
 
@@ -97,6 +98,7 @@ services:
       - "sentinel-1=172.21.0.6"
       - "sentinel-2=172.21.0.7"
       - "sentinel-3=172.21.1.8"
+      - "sentinel-4=172.21.1.9"
     cap_add:
       - NET_ADMIN  # Allows network management to configure routing
 
@@ -113,7 +115,7 @@ services:
             echo "bind 0.0.0.0" > /etc/sentinel.conf &&
             echo "sentinel announce-ip 172.21.0.6" >> /etc/sentinel.conf &&
             echo "sentinel announce-port 26379" >> /etc/sentinel.conf &&
-            echo "sentinel monitor mymaster 172.21.0.3 6379 2" >> /etc/sentinel.conf &&
+            echo "sentinel monitor mymaster 172.21.0.3 6379 3" >> /etc/sentinel.conf &&
             echo "sentinel resolve-hostnames yes" >> /etc/sentinel.conf &&
             echo "sentinel down-after-milliseconds mymaster 10000" >> /etc/sentinel.conf &&
             echo "sentinel failover-timeout mymaster 10000" >> /etc/sentinel.conf &&
@@ -129,6 +131,7 @@ services:
       - "sentinel-1=172.21.0.6"
       - "sentinel-2=172.21.0.7"
       - "sentinel-3=172.21.1.8"
+      - "sentinel-4=172.21.1.9"
     cap_add:
       - NET_ADMIN  # Allows network management to configure routing
 
@@ -146,7 +149,7 @@ services:
               echo "bind 0.0.0.0" > /etc/sentinel.conf &&
               echo "sentinel announce-ip 172.21.0.7" >> /etc/sentinel.conf &&
               echo "sentinel announce-port 26379" >> /etc/sentinel.conf &&
-              echo "sentinel monitor mymaster 172.21.0.3 6379 2" >> /etc/sentinel.conf &&
+              echo "sentinel monitor mymaster 172.21.0.3 6379 3" >> /etc/sentinel.conf &&
               echo "sentinel resolve-hostnames yes" >> /etc/sentinel.conf &&
               echo "sentinel down-after-milliseconds mymaster 10000" >> /etc/sentinel.conf &&
               echo "sentinel failover-timeout mymaster 10000" >> /etc/sentinel.conf &&
@@ -162,6 +165,7 @@ services:
       - "sentinel-1=172.21.0.6"
       - "sentinel-2=172.21.0.7"
       - "sentinel-3=172.21.1.8"
+      - "sentinel-4=172.21.1.9"
     cap_add:
       - NET_ADMIN  # Allows network management to configure routing
 
@@ -178,7 +182,7 @@ services:
               echo "bind 0.0.0.0" > /etc/sentinel.conf &&
               echo "sentinel announce-ip 172.21.1.8" >> /etc/sentinel.conf &&
               echo "sentinel announce-port 26379" >> /etc/sentinel.conf &&
-              echo "sentinel monitor mymaster 172.21.0.3 6379 2" >> /etc/sentinel.conf &&
+              echo "sentinel monitor mymaster 172.21.0.3 6379 3" >> /etc/sentinel.conf &&
               echo "sentinel resolve-hostnames yes" >> /etc/sentinel.conf &&
               echo "sentinel down-after-milliseconds mymaster 10000" >> /etc/sentinel.conf &&
               echo "sentinel failover-timeout mymaster 10000" >> /etc/sentinel.conf &&
@@ -194,6 +198,40 @@ services:
       - "sentinel-1=172.21.0.6"
       - "sentinel-2=172.21.0.7"
       - "sentinel-3=172.21.1.8"
+      - "sentinel-4=172.21.1.9"
+    cap_add:
+      - NET_ADMIN  # Allows network management to configure routing
+
+  sentinel-4:
+    image: pdns-redis:latest
+    container_name: sentinel-4
+    hostname: sentinel-4
+    depends_on:
+      - redis-1
+    ports:
+      - "26382:26379"
+    command: >
+        sh -c 'ip route add 172.21.0.0/24 via 172.21.1.2 &&
+              echo "bind 0.0.0.0" > /etc/sentinel.conf &&
+              echo "sentinel announce-ip 172.21.1.9" >> /etc/sentinel.conf &&
+              echo "sentinel announce-port 26379" >> /etc/sentinel.conf &&
+              echo "sentinel monitor mymaster 172.21.0.3 6379 3" >> /etc/sentinel.conf &&
+              echo "sentinel resolve-hostnames yes" >> /etc/sentinel.conf &&
+              echo "sentinel down-after-milliseconds mymaster 10000" >> /etc/sentinel.conf &&
+              echo "sentinel failover-timeout mymaster 10000" >> /etc/sentinel.conf &&
+              echo "sentinel parallel-syncs mymaster 1" >> /etc/sentinel.conf &&
+              redis-sentinel /etc/sentinel.conf'
+    networks:
+      redis-net-b:
+        ipv4_address: 172.21.1.9
+    extra_hosts:
+      - "redis-1=172.21.0.3"
+      - "redis-2=172.21.0.4"
+      - "redis-3=172.21.1.5"
+      - "sentinel-1=172.21.0.6"
+      - "sentinel-2=172.21.0.7"
+      - "sentinel-3=172.21.1.8"
+      - "sentinel-4=172.21.1.9"
     cap_add:
       - NET_ADMIN  # Allows network management to configure routing
 
